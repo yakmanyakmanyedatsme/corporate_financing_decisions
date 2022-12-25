@@ -1,0 +1,33 @@
+dff <- data.table()
+deflation <- function(yr = 2000){
+  library(purrr)
+  toNumerics <- function(df) {
+    stopifnot(inherits(df$DATE, c("Date", "POSIXt")))
+    df <- df %>% mutate(day = as.numeric(strftime(DATE, format = "%d")))
+    df <- df %>% mutate(month = as.numeric(strftime(DATE, format = "%m")))
+    df <- df %>% mutate(year = as.numeric(strftime(DATE, format = "%Y")))
+    return(df)
+  }
+  #load("D:/Inflation/Data/my_work_space2.RData")
+  options("RStata.StataPath" = "\"C:\\Program Files\\Stata16\\StataSE-64\"")
+  options("RStata.StataVersion" = 16)
+  setwd("C:/Users/wfran/Dropbox/Research Projects/Inflation/Data/Inflation_time_series")
+  fls <- list.files()
+  fls <- lapply(fls, read.csv)
+  dff <- fls %>% reduce(full_join, by = "DATE")
+  dff <- dff %>% mutate(DATE = as.Date(DATE,tryFormats = c("%Y-%m-%d", "%Y/%m/%d")))
+  dff <- dff %>% mutate(CUUR0000SA0L2 = as.numeric(CUUR0000SA0L2))
+  dff <- dff %>% arrange(desc(DATE))
+  dff <- dff %>% mutate(CPALTT01USM657N = CPALTT01USM657N*100)
+  dff <- dff %>% select(which(colnames(dff) %in% c("DATE", "PCE", "CPIAUCSL")))
+  dff <- dff %>% toNumerics()
+  t = unlist(which(dff$day == 1 & dff$month == 1 & dff$year == yr))
+  dff <- dff %>% mutate(fyear = year)
+  cpi_def = print(dff[["CPIAUCSL"]][t])
+  pce_def = print(dff[["PCE"]][t])
+  dff <- dff %>% mutate(CPIAUCSL = CPIAUCSL/cpi_def)
+  dff <- dff %>% mutate(PCE = PCE/pce_def)
+  dff <- dff %>% filter(dff$month == 1 & dff$month == 1)
+  dff <<- dff %>% select(which(colnames(dff) %in% c("fyear", "PCE", "CPIAUCSL")))
+}
+
